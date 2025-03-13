@@ -8,17 +8,16 @@ namespace TimeTrackerBackend.Controllers;
 [Route("[controller]")]
 public class AppController(TimeTrackerContext db) : ControllerBase
 {
-    [HttpGet("/test")]
-    public List<Employee> GetTest()
+    [HttpPost("/login")]
+    public bool Login([FromQuery] string email, [FromQuery] string password)
     {
-        var emp = new Employee();
-        emp.FirstName = "John";
-        emp.LastName = "Doe";
-        emp.Email = "john.doe@gmail.com";
-        emp.PasswordHash = "123456";
-        db.Employees.Add(emp);
-        db.SaveChanges();
-        return db.Employees.ToList();
+        var user = db.Employees.FirstOrDefault(e => e.Email == email);
+        if (user == null)
+        {
+            return false;
+        }
+
+        return user.PasswordHash == password;
     }
 
     [HttpPost("/employees")]
@@ -52,6 +51,7 @@ public class AppController(TimeTrackerContext db) : ControllerBase
         {
             throw new HttpRequestException("Employee not found");
         }
+
         var started = db.TimeEntries.FirstOrDefault(x => x.EmployeeId == employeeId && x.End == null);
         if (started != null)
         {
@@ -66,9 +66,9 @@ public class AppController(TimeTrackerContext db) : ControllerBase
         };
         db.TimeEntries.Add(newTimeEntry);
         db.SaveChanges();
-        return true;    
+        return true;
     }
-    
+
     [HttpPost("/timeEntry/stop")]
     public bool StopWorking(int employeeId, string comment)
     {
@@ -77,16 +77,17 @@ public class AppController(TimeTrackerContext db) : ControllerBase
         {
             throw new HttpRequestException("Employee not found");
         }
+
         var started = db.TimeEntries.FirstOrDefault(x => x.EmployeeId == employeeId && x.End == null);
         if (started == null)
         {
             throw new HttpRequestException("not started working");
         }
-        
+
         started.End = DateTime.Now;
         started.Comment = comment;
         db.SaveChanges();
-        return true;    
+        return true;
     }
 
     [HttpGet("/employees/{id}/timeentries")]
@@ -106,15 +107,15 @@ public class AppController(TimeTrackerContext db) : ControllerBase
             ))
             .ToList();
 
-        return entries; 
+        return entries;
     }
 
     [HttpGet("/employees/{id}/totalHours")]
     public List<TotalDayTimeEntryDto> GetTotalHours(int id, DateTime from, DateTime to)
     {
         var fromDate = from.Date;
-        var toDate   = to.Date;
-        
+        var toDate = to.Date;
+
         var entries = db.TimeEntries
             .Where(te => te.EmployeeId == id
                          && te.Start.Date >= fromDate
@@ -130,7 +131,7 @@ public class AppController(TimeTrackerContext db) : ControllerBase
             ))
             .ToList();
 
-        return results; 
+        return results;
     }
 
     [HttpPut("/timeentries/{id}")]
@@ -148,13 +149,13 @@ public class AppController(TimeTrackerContext db) : ControllerBase
         {
             throw new Exception("Cannot set 'End' to a future time.");
         }
-        
+
         var employeeId = entry.EmployeeId; // or dto.EmployeeId if you have it in the DTO
         bool hasOverlap = db.TimeEntries.Any(e =>
             e.Id != id // exclude the current entry being edited
             && e.EmployeeId == employeeId
             && e.Start < dto.End
-            && (e.End   > dto.Start));
+            && (e.End > dto.Start));
 
         if (hasOverlap)
         {
@@ -163,7 +164,7 @@ public class AppController(TimeTrackerContext db) : ControllerBase
 
         // 4) If validation passes, update the fields
         entry.Start = dto.Start;
-        entry.End   = dto.End;
+        entry.End = dto.End;
         entry.Comment = dto.Comment;
 
         db.SaveChanges();
@@ -184,7 +185,6 @@ public class AppController(TimeTrackerContext db) : ControllerBase
         var entry = db.TimeEntries.FirstOrDefault(e => e.Id == id);
         if (entry == null)
         {
-           
             throw new Exception($"TimeEntry not found");
         }
 
@@ -194,8 +194,10 @@ public class AppController(TimeTrackerContext db) : ControllerBase
         return true;
     }
 
-    
+
     public record AddEmployeeDto(String FirstName, String LastName, String Email, String Password);
-    public record TimeEntryDto(int Id,int EmployeeId, DateTime Start, DateTime? End, String Comment);
+
+    public record TimeEntryDto(int Id, int EmployeeId, DateTime Start, DateTime? End, String Comment);
+
     public record TotalDayTimeEntryDto(int EmployeeId, DateTime Date, double Hours);
 }
