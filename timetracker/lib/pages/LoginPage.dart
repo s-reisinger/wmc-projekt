@@ -17,7 +17,6 @@ class _LoginPageState extends State<LoginPage> {
   String? _errorMessage;
   AppApi? api;
 
-
   _LoginPageState() {
     var client = ApiClient(basePath: 'http://localhost:5000');
     api = AppApi(client);
@@ -28,6 +27,7 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
       _errorMessage = null;
     });
+    print('handleLogin');
 
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
@@ -37,14 +37,16 @@ class _LoginPageState extends State<LoginPage> {
     try {
       var res = await api!.loginPost(email: username, password: password);
       if (res!) {
+        print('res is true');
         if (!mounted) return;
-        context.go('/home');
+        print('going to home');
+        context.go('home');
       } else {
         setState(() {
           _errorMessage = 'Invalid credentials.';
         });
       }
-    } on Exception catch(e) {
+    } on Exception catch (e) {
       print(e);
     }
 
@@ -67,7 +69,10 @@ class _LoginPageState extends State<LoginPage> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 24.0,
+                horizontal: 16.0,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -112,13 +117,14 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: _isLoading ? null : _handleLogin,
-                    icon: _isLoading
-                        ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                        : const Icon(Icons.login),
+                    icon:
+                        _isLoading
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.login),
                     label: Text(_isLoading ? 'Logging in...' : 'Login'),
                   ),
                 ],

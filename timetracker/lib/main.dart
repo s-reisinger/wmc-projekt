@@ -1,59 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:timetracker/pages/HomeShell.dart';
+import 'package:timetracker/services/SettingsService.dart';
 
 // Import your LoginPage (wherever you put it).
 import 'pages/LoginPage.dart';
 
-// A simple placeholder for the "home" page
-class HomePage extends StatelessWidget {
-  const HomePage({Key? key}) : super(key: key);
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
-      body: const Center(
-        child: Text('Welcome to the Home Page!'),
-      ),
-    );
-  }
-}
+  // Load dark mode from SharedPreferences
+  final bool initiallyDark = await SettingsService.isDarkMode();
 
-void main() {
-  runApp(const MyApp());
+  // This notifier holds the current Dark Mode state
+  final darkModeNotifier = ValueNotifier<bool>(initiallyDark);
+
+  runApp(MyApp(darkModeNotifier: darkModeNotifier));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  final ValueNotifier<bool> darkModeNotifier;
+  const MyApp({Key? key, required this.darkModeNotifier}) : super(key: key);
 
-  // 1) Define your GoRouter, listing the routes
-  static final GoRouter _router = GoRouter(
+  // Build our GoRouter with two main routes: login and home
+  static GoRouter _router(ValueNotifier<bool> darkModeNotifier) => GoRouter(
     routes: [
-      // The login route at "/"
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const LoginPage(),
-      ),
-      // The home route at "/home"
+      GoRoute(path: '/', builder: (context, state) => const LoginPage()),
       GoRoute(
         path: '/home',
-        builder: (context, state) => const HomePage(),
+        builder:
+            (context, state) => HomeShell(darkModeNotifier: darkModeNotifier),
       ),
     ],
   );
 
   @override
   Widget build(BuildContext context) {
-    // 2) Use MaterialApp.router to wire up go_router
-    return MaterialApp.router(
-      title: 'Flutter Login Demo',
-      routerDelegate: _router.routerDelegate,
-      routeInformationParser: _router.routeInformationParser,
-      routeInformationProvider: _router.routeInformationProvider,
-      // Optional theme or themeMode
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: darkModeNotifier,
+      builder: (context, isDark, _) {
+        return MaterialApp.router(
+          title: 'Flutter Login Demo',
+          // Change the theme based on isDark
+          theme: ThemeData(
+            primarySwatch: Colors.blue,
+            brightness: isDark ? Brightness.dark : Brightness.light,
+          ),
+          routerDelegate: _router(darkModeNotifier).routerDelegate,
+          routeInformationParser:
+              _router(darkModeNotifier).routeInformationParser,
+          routeInformationProvider:
+              _router(darkModeNotifier).routeInformationProvider,
+        );
+      },
     );
   }
 }
