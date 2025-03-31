@@ -37,15 +37,15 @@ class _HomeShellState extends State<HomeShell> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.list),
-            label: 'List',
+            label: 'Übersicht',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: 'Main',
+            label: 'Aufzeichnung',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
-            label: 'Settings',
+            label: 'Einstellungen',
           ),
         ],
       ),

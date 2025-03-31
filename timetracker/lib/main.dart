@@ -54,7 +54,7 @@ class _MyAppState extends State<MyApp> {
       valueListenable: widget.darkModeNotifier,
       builder: (context, isDark, _) {
         return MaterialApp.router(
-          title: 'Flutter Login Demo',
+          title: 'WMC Timetracker',
           theme: ThemeData(
             primarySwatch: Colors.blue,
             brightness: isDark ? Brightness.dark : Brightness.light,

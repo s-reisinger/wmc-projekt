@@ -76,15 +76,14 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     return editingMode;
   }
 
-  /// Loads data:
-  /// 1. If today, checks whether the user is working.
-  /// 2. Loads time entries for the selected date.
-  /// 3. For today and if working, auto-selects the ongoing entry only if no finished entry was selected.
+  /// Loads data
   Future<void> _loadData() async {
     if (employee == null) {
       context.go('/');
+      return;
     }
     setState(() => isLoading = true);
+
     try {
       if (isToday) {
         isWorking = (await api.isWorkingGet(employeeId: employee!.id)) ?? false;
@@ -93,11 +92,10 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
       }
 
       final adjustedDay = _shiftMidnightToUtc(selectedDate);
-      timeEntries =
-          (await api.employeesIdTimeentriesGet(
-            employee!.id!,
-            day: adjustedDay,
-          )) ??
+      timeEntries = (await api.employeesIdTimeentriesGet(
+        employee!.id!,
+        day: adjustedDay,
+      )) ??
           [];
 
       if (isToday && isWorking) {
@@ -105,7 +103,7 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
           try {
             final ongoing = timeEntries.firstWhere((e) => e.end == null);
             _selectEntry(ongoing);
-          } catch (e) {}
+          } catch (_) {}
         }
       } else {
         _clearMainFields();
@@ -125,7 +123,7 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
   }
 
   DateTime _shiftMidnightToUtc(DateTime localDate) {
-    // If we only care about the date portion, strip out any hour/minute/second
+    // If we only care about the date portion, strip out any hour/minute
     final localMidnight = DateTime(
       localDate.year,
       localDate.month,
@@ -135,7 +133,6 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     return localMidnight.add(localMidnight.timeZoneOffset).toUtc();
   }
 
-  /// Called when tapping the left arrow.
   void _onLeftDate() {
     setState(() {
       selectedDate = selectedDate.subtract(const Duration(days: 1));
@@ -144,7 +141,6 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     _loadData();
   }
 
-  /// Called when tapping the right arrow (disallowed if selectedDate is today).
   void _onRightDate() {
     final today = DateTime.now();
     if (selectedDate.isBefore(DateTime(today.year, today.month, today.day))) {
@@ -156,7 +152,6 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     }
   }
 
-  /// Opens the date picker.
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final firstDate = DateTime(now.year - 2);
@@ -188,7 +183,6 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     }
   }
 
-  /// Main button press handler.
   Future<void> _onMainButtonPressed() async {
     if (!isToday || editingMode) {
       return _saveEntryForOlderDay();
@@ -201,7 +195,6 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     }
   }
 
-  /// Calls POST /timeEntry/start.
   Future<void> _startWorking() async {
     setState(() => isLoading = true);
     try {
@@ -216,7 +209,6 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     setState(() => isLoading = false);
   }
 
-  /// Calls POST /timeEntry/stop.
   Future<void> _stopWorking() async {
     setState(() => isLoading = true);
     try {
@@ -231,7 +223,6 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     setState(() => isLoading = false);
   }
 
-  /// For past dates or editing a finished entry, saves the entry.
   Future<void> _saveEntryForOlderDay() async {
     setState(() => isLoading = true);
     try {
@@ -249,13 +240,12 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
             id: -1,
             employeeId: employee!.id,
             start: startDateTime,
-            // Convert to UTC if your backend expects it
             end: endDateTime,
             comment: comment,
           ),
         );
       } else {
-        // EDIT (PUT) ...
+        // EDIT (PUT)
         await api.timeentriesIdPut(
           _selectedEntry!.id!,
           timeEntryDto: TimeEntryDto(
@@ -267,6 +257,7 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
           ),
         );
       }
+
       _clearMainFields();
       await _loadData();
     } catch (e) {
@@ -275,19 +266,57 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     setState(() => isLoading = false);
   }
 
-  /// Creates a new empty entry.
   Future<void> _createEmptyEntry() async {
     setState(() {
-      // Reset the working flag and clear any selection.
       isWorking = false;
       _clearMainFields();
       editingMode = false;
     });
-    // Optionally, reload the data if needed.
     await _loadData();
   }
 
-  /// Combines a date with a "HH:mm" string.
+  Future<void> _confirmDelete(TimeEntryDto entry) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eintrag löschen'),
+        content: const Text('Möchten Sie diesen Eintrag wirklich löschen?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Abbrechen'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Call the DELETE endpoint
+      try {
+        setState(() => isLoading = true);
+        await api.timeentriesIdDelete(entry.id!);
+        await _loadData();
+      } catch (e) {
+        debugPrint('Error deleting entry: $e');
+      } finally {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  void _selectEntry(TimeEntryDto entry) {
+    _selectedEntry = entry;
+    startTimeController.text = _formatTime(entry.start);
+    endTimeController.text = _formatTime(entry.end);
+    commentController.text = entry.comment ?? '';
+    editingMode = entry.end != null;
+    setState(() {});
+  }
+
   DateTime _combineDateAndTime(DateTime date, String hhmm) {
     try {
       final parts = hhmm.split(':');
@@ -299,24 +328,12 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     }
   }
 
-  /// When an entry is tapped, fill the fields and set editing mode if finished.
-  void _selectEntry(TimeEntryDto entry) {
-    _selectedEntry = entry;
-    startTimeController.text = _formatTime(entry.start);
-    endTimeController.text = _formatTime(entry.end);
-    commentController.text = entry.comment ?? '';
-    editingMode = entry.end != null;
-    setState(() {});
-  }
-
   String _formatTime(DateTime? dt) {
     if (dt == null) return '';
-    // Convert from UTC to local if necessary:
     final local = dt.toLocal();
     return DateFormat('HH:mm').format(local);
   }
 
-  /// Formats a DateTime as 'dd.MM.yyyy HH:mm' (German).
   String _formatDateTime(DateTime? dt) {
     if (dt == null) return '';
     return DateFormat('dd.MM.yyyy HH:mm').format(dt);
@@ -327,10 +344,10 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     final dateLabel = DateFormat('dd.MM.yyyy').format(selectedDate);
     final today = DateTime.now();
     final bool disableRightArrow =
-        !selectedDate.isBefore(DateTime(today.year, today.month, today.day));
+    !selectedDate.isBefore(DateTime(today.year, today.month, today.day));
+
     return Scaffold(
       appBar: AppBar(title: const Text('Time Tracking')),
-      // Add a FloatingActionButton to create a new empty entry.
       floatingActionButton: FloatingActionButton(
         onPressed: _createEmptyEntry,
         tooltip: 'Neue Zeiterfassung',
@@ -342,7 +359,7 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
             children: [
               Text(
                 'Hallo, ${employee == null ? '' : employee!.firstName}',
-                style: TextStyle(fontSize: 20),
+                style: const TextStyle(fontSize: 20),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -351,14 +368,16 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
                     icon: const Icon(Icons.arrow_left),
                     onPressed: _onLeftDate,
                   ),
-                  TextButton(onPressed: _pickDate, child: Text(dateLabel)),
+                  TextButton(
+                    onPressed: _pickDate,
+                    child: Text(dateLabel),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.arrow_right),
                     onPressed: disableRightArrow ? null : _onRightDate,
                   ),
                 ],
               ),
-              // Start and End fields on the same row.
               Row(
                 children: [
                   Expanded(
@@ -366,13 +385,11 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: TextField(
                         controller: startTimeController,
-                        decoration: const InputDecoration(
-                          labelText: 'Startzeit',
-                        ),
-                        onTap:
-                            canEditFields
-                                ? () => _pickTime(startTimeController)
-                                : null,
+                        decoration:
+                        const InputDecoration(labelText: 'Startzeit'),
+                        onTap: canEditFields
+                            ? () => _pickTime(startTimeController)
+                            : null,
                         enabled: canEditFields,
                       ),
                     ),
@@ -383,18 +400,17 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: TextField(
                         controller: endTimeController,
-                        decoration: const InputDecoration(labelText: 'Endzeit'),
-                        onTap:
-                            canEditFields
-                                ? () => _pickTime(endTimeController)
-                                : null,
+                        decoration:
+                        const InputDecoration(labelText: 'Endzeit'),
+                        onTap: canEditFields
+                            ? () => _pickTime(endTimeController)
+                            : null,
                         enabled: canEditFields,
                       ),
                     ),
                   ),
                 ],
               ),
-              // Comment field.
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: TextField(
@@ -404,12 +420,10 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Main action button.
               ElevatedButton(
                 onPressed: isLoading ? null : _onMainButtonPressed,
                 child: Text(buttonLabel),
               ),
-              // List of time entries.
               Expanded(
                 child: ListView.builder(
                   itemCount: timeEntries.length,
@@ -418,10 +432,18 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
                     final startStr = _formatDateTime(entry.start);
                     final endStr = _formatDateTime(entry.end);
                     final comment = entry.comment ?? '';
+
                     return ListTile(
                       title: Text('$startStr → $endStr'),
                       subtitle: Text(comment),
                       onTap: () => _selectEntry(entry),
+                      // If the entry is completed (end != null), show a delete icon
+                      trailing: (entry.end != null)
+                          ? IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () => _confirmDelete(entry),
+                      )
+                          : null,
                     );
                   },
                 ),

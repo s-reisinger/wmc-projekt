@@ -47,30 +47,24 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    bool isDarkMode = widget.darkModeNotifier.value;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: const Text('Einstellungen')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          SwitchListTile(
-            title: const Text('Dark Mode'),
-            value: isDarkMode,
-            onChanged: _onDarkModeChanged,
+          // Instead of reading isDarkMode = widget.darkModeNotifier.value,
+          // let ValueListenableBuilder do it for you:
+          ValueListenableBuilder<bool>(
+            valueListenable: widget.darkModeNotifier,
+            builder: (context, isDark, _) {
+              return SwitchListTile(
+                title: const Text('Dark Mode'),
+                value: isDark,
+                onChanged: _onDarkModeChanged,
+              );
+            },
           ),
-          const Divider(),
-          TextField(
-            controller: _displayNameController,
-            decoration: const InputDecoration(labelText: 'Display Name'),
-            onEditingComplete: _onSaveDisplayName,
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: _onSaveDisplayName,
-            child: const Text('Save Display Name'),
-          ),
-          SizedBox(height: 20,),
+          const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () => context.go('/'),
             child: const Text('Logout'),
