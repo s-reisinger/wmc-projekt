@@ -40,7 +40,7 @@ class _LoginPageState extends State<LoginPage> {
         print('res is true');
         if (!mounted) return;
         print('going to home');
-        context.go('home');
+        context.go('/home');
       } else {
         setState(() {
           _errorMessage = 'Invalid credentials.';

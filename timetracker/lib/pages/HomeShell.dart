@@ -17,7 +17,7 @@ class _HomeShellState extends State<HomeShell> {
 
   late final List<Widget> _pages = [
     const ListPage(),
-    const MainPage(),
+    const TimeTrackingPage(),
     SettingsPage(darkModeNotifier: widget.darkModeNotifier),
   ];
 
