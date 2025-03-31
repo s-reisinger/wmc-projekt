@@ -16,6 +16,58 @@ class AppApi {
 
   final ApiClient apiClient;
 
+  /// Performs an HTTP 'POST /App/employees/{employeeId}/timeentries' operation and returns the [Response].
+  /// Parameters:
+  ///
+  /// * [int] employeeId (required):
+  ///
+  /// * [TimeEntryDto] timeEntryDto:
+  Future<Response> appEmployeesEmployeeIdTimeentriesPostWithHttpInfo(int employeeId, { TimeEntryDto? timeEntryDto, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/App/employees/{employeeId}/timeentries'
+      .replaceAll('{employeeId}', employeeId.toString());
+
+    // ignore: prefer_final_locals
+    Object? postBody = timeEntryDto;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json', 'text/json', 'application/*+json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Parameters:
+  ///
+  /// * [int] employeeId (required):
+  ///
+  /// * [TimeEntryDto] timeEntryDto:
+  Future<TimeEntryDto?> appEmployeesEmployeeIdTimeentriesPost(int employeeId, { TimeEntryDto? timeEntryDto, }) async {
+    final response = await appEmployeesEmployeeIdTimeentriesPostWithHttpInfo(employeeId,  timeEntryDto: timeEntryDto, );
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'TimeEntryDto',) as TimeEntryDto;
+    
+    }
+    return null;
+  }
+
   /// Performs an HTTP 'GET /employees/{id}/timeentries' operation and returns the [Response].
   /// Parameters:
   ///
@@ -282,7 +334,7 @@ class AppApi {
   /// * [String] email:
   ///
   /// * [String] password:
-  Future<bool?> loginPost({ String? email, String? password, }) async {
+  Future<EmployeeDto?> loginPost({ String? email, String? password, }) async {
     final response = await loginPostWithHttpInfo( email: email, password: password, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
@@ -291,7 +343,7 @@ class AppApi {
     // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
-      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'bool',) as bool;
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'EmployeeDto',) as EmployeeDto;
     
     }
     return null;

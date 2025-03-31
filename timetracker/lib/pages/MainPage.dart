@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:timetracker/MyFlutterApiClient/lib/api.dart';
+import 'package:timetracker/services/SharedService.dart';
 
 class TimeTrackingPage extends StatefulWidget {
   const TimeTrackingPage({Key? key}) : super(key: key);
 
   @override
-  State<TimeTrackingPage> createState() => _TimeTrackingPageState();
+  State<TimeTrackingPage> createState() {
+    return _TimeTrackingPageState();
+  }
 }
 
 class _TimeTrackingPageState extends State<TimeTrackingPage> {
   // For demo purposes, fixed employeeId.
-  final int employeeId = 1;
+  final EmployeeDto? employee = SharedService.loggedInUser;
 
   // The selected date; defaults to today.
   DateTime selectedDate = DateTime.now();
@@ -41,7 +45,7 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
   @override
   void initState() {
     super.initState();
-    final client = ApiClient(basePath: 'http://localhost:5000');
+    final client = ApiClient(basePath: SharedService.basePath);
     api = AppApi(client);
     _loadData();
   }
@@ -55,7 +59,9 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
 
   /// Determines the main button label.
   String get buttonLabel {
-    if (!isToday) return 'Speichern';
+    if (!isToday) {
+      return 'Speichern';
+    }
     // Today:
     if (isWorking) {
       return editingMode ? 'Speichern' : 'Gehen';
@@ -65,35 +71,43 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     return 'Kommen';
   }
 
+  bool get canEditFields {
+    if (!isToday) return true;
+    return editingMode;
+  }
+
   /// Loads data:
   /// 1. If today, checks whether the user is working.
   /// 2. Loads time entries for the selected date.
   /// 3. For today and if working, auto-selects the ongoing entry only if no finished entry was selected.
   Future<void> _loadData() async {
+    if (employee == null) {
+      context.go('/');
+    }
     setState(() => isLoading = true);
     try {
       if (isToday) {
-        isWorking = (await api.isWorkingGet(employeeId: employeeId)) ?? false;
+        isWorking = (await api.isWorkingGet(employeeId: employee!.id)) ?? false;
       } else {
         isWorking = false;
       }
 
-      // API takes the date object directly.
-      timeEntries = (await api.employeesIdTimeentriesGet(employeeId, day: selectedDate)) ?? [];
+      final adjustedDay = _shiftMidnightToUtc(selectedDate);
+      timeEntries =
+          (await api.employeesIdTimeentriesGet(
+            employee!.id!,
+            day: adjustedDay,
+          )) ??
+          [];
 
-      // For today and if working, auto-select the ongoing entry (end == null)
-      // only if no finished entry is currently selected.
       if (isToday && isWorking) {
         if (_selectedEntry == null || _selectedEntry!.end == null) {
           try {
             final ongoing = timeEntries.firstWhere((e) => e.end == null);
             _selectEntry(ongoing);
-          } catch (e) {
-            // No ongoing entry found.
-          }
+          } catch (e) {}
         }
       } else {
-        // For past dates or if not working, clear any selection.
         _clearMainFields();
       }
     } catch (e) {
@@ -102,13 +116,23 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     setState(() => isLoading = false);
   }
 
-  /// Clears the main fields and resets editing.
   void _clearMainFields() {
     startTimeController.clear();
     endTimeController.clear();
     commentController.clear();
     _selectedEntry = null;
     editingMode = false;
+  }
+
+  DateTime _shiftMidnightToUtc(DateTime localDate) {
+    // If we only care about the date portion, strip out any hour/minute/second
+    final localMidnight = DateTime(
+      localDate.year,
+      localDate.month,
+      localDate.day,
+    );
+    // Add the timezone offset before converting to UTC
+    return localMidnight.add(localMidnight.timeZoneOffset).toUtc();
   }
 
   /// Called when tapping the left arrow.
@@ -153,7 +177,6 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     }
   }
 
-  /// Opens the time picker and updates [controller] with the selected time.
   Future<void> _pickTime(TextEditingController controller) async {
     final timeOfDay = await showTimePicker(
       context: context,
@@ -161,7 +184,7 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     );
     if (timeOfDay != null) {
       final date = DateTime(0, 0, 0, timeOfDay.hour, timeOfDay.minute);
-      controller.text = DateFormat('HH:mm', 'de_DE').format(date);
+      controller.text = DateFormat('HH:mm').format(date);
     }
   }
 
@@ -182,7 +205,7 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
   Future<void> _startWorking() async {
     setState(() => isLoading = true);
     try {
-      await api.timeEntryStartPost(employeeId: employeeId);
+      await api.timeEntryStartPost(employeeId: employee!.id);
       isWorking = true;
       commentController.clear();
       _clearMainFields();
@@ -198,7 +221,7 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     setState(() => isLoading = true);
     try {
       final comment = commentController.text.trim();
-      await api.timeEntryStopPost(employeeId: employeeId, comment: comment);
+      await api.timeEntryStopPost(employeeId: employee!.id, comment: comment);
       isWorking = false;
       _clearMainFields();
       await _loadData();
@@ -217,15 +240,27 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
       final comment = commentController.text.trim();
       final startDateTime = _combineDateAndTime(selectedDate, startText);
       final endDateTime = _combineDateAndTime(selectedDate, endText);
+
       if (_selectedEntry == null) {
-        // TODO: Create new entry (POST) if needed.
-      } else {
-        final entryId = _selectedEntry!.id!;
-        await api.timeentriesIdPut(
-          entryId,
+        // CREATE (POST)
+        await api.appEmployeesEmployeeIdTimeentriesPost(
+          employee!.id!,
           timeEntryDto: TimeEntryDto(
-            id: entryId,
-            employeeId: employeeId,
+            id: -1,
+            employeeId: employee!.id,
+            start: startDateTime,
+            // Convert to UTC if your backend expects it
+            end: endDateTime,
+            comment: comment,
+          ),
+        );
+      } else {
+        // EDIT (PUT) ...
+        await api.timeentriesIdPut(
+          _selectedEntry!.id!,
+          timeEntryDto: TimeEntryDto(
+            id: _selectedEntry!.id,
+            employeeId: employee!.id,
             start: startDateTime,
             end: endDateTime,
             comment: comment,
@@ -251,6 +286,7 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     // Optionally, reload the data if needed.
     await _loadData();
   }
+
   /// Combines a date with a "HH:mm" string.
   DateTime _combineDateAndTime(DateTime date, String hhmm) {
     try {
@@ -273,24 +309,25 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
     setState(() {});
   }
 
-  /// Formats a DateTime as 'HH:mm' (German).
   String _formatTime(DateTime? dt) {
     if (dt == null) return '';
-    return DateFormat('HH:mm', 'de_DE').format(dt);
+    // Convert from UTC to local if necessary:
+    final local = dt.toLocal();
+    return DateFormat('HH:mm').format(local);
   }
 
   /// Formats a DateTime as 'dd.MM.yyyy HH:mm' (German).
   String _formatDateTime(DateTime? dt) {
     if (dt == null) return '';
-    return DateFormat('dd.MM.yyyy HH:mm', 'de_DE').format(dt);
+    return DateFormat('dd.MM.yyyy HH:mm').format(dt);
   }
 
   @override
   Widget build(BuildContext context) {
-    final dateLabel = DateFormat('dd.MM.yyyy', 'de_DE').format(selectedDate);
+    final dateLabel = DateFormat('dd.MM.yyyy').format(selectedDate);
     final today = DateTime.now();
     final bool disableRightArrow =
-    !selectedDate.isBefore(DateTime(today.year, today.month, today.day));
+        !selectedDate.isBefore(DateTime(today.year, today.month, today.day));
     return Scaffold(
       appBar: AppBar(title: const Text('Time Tracking')),
       // Add a FloatingActionButton to create a new empty entry.
@@ -303,7 +340,10 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
         children: [
           Column(
             children: [
-              // Date navigation row.
+              Text(
+                'Hallo, ${employee == null ? '' : employee!.firstName}',
+                style: TextStyle(fontSize: 20),
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -311,10 +351,7 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
                     icon: const Icon(Icons.arrow_left),
                     onPressed: _onLeftDate,
                   ),
-                  TextButton(
-                    onPressed: _pickDate,
-                    child: Text(dateLabel),
-                  ),
+                  TextButton(onPressed: _pickDate, child: Text(dateLabel)),
                   IconButton(
                     icon: const Icon(Icons.arrow_right),
                     onPressed: disableRightArrow ? null : _onRightDate,
@@ -329,9 +366,14 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: TextField(
                         controller: startTimeController,
-                        decoration: const InputDecoration(labelText: 'Startzeit'),
-                        onTap: editingMode ? () => _pickTime(startTimeController) : null,
-                        readOnly: !editingMode,
+                        decoration: const InputDecoration(
+                          labelText: 'Startzeit',
+                        ),
+                        onTap:
+                            canEditFields
+                                ? () => _pickTime(startTimeController)
+                                : null,
+                        enabled: canEditFields,
                       ),
                     ),
                   ),
@@ -342,8 +384,11 @@ class _TimeTrackingPageState extends State<TimeTrackingPage> {
                       child: TextField(
                         controller: endTimeController,
                         decoration: const InputDecoration(labelText: 'Endzeit'),
-                        onTap: editingMode ? () => _pickTime(endTimeController) : null,
-                        readOnly: !editingMode,
+                        onTap:
+                            canEditFields
+                                ? () => _pickTime(endTimeController)
+                                : null,
+                        enabled: canEditFields,
                       ),
                     ),
                   ),

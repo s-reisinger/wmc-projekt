@@ -3,9 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:timetracker/pages/HomeShell.dart';
 import 'package:timetracker/services/SettingsService.dart';
 import 'package:intl/date_symbol_data_local.dart';
-//import 'package:flutter/flutter_localizations.dart';
+// ADD this import:
+import 'package:flutter_localizations/flutter_localizations.dart';
 
-// Import your LoginPage (wherever you put it).
 import 'pages/LoginPage.dart';
 
 void main() async {
@@ -59,10 +59,21 @@ class _MyAppState extends State<MyApp> {
             primarySwatch: Colors.blue,
             brightness: isDark ? Brightness.dark : Brightness.light,
           ),
-          routerConfig: _router, // use routerConfig instead of breaking it up
+          // **Important**: Provide the localization delegates:
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          // And specify the supported locales:
+          supportedLocales: const [
+            Locale('de', 'DE'), // German
+            Locale('en', 'US'), // English (optional)
+          ],
+
+          routerConfig: _router,
         );
       },
     );
   }
 }
-

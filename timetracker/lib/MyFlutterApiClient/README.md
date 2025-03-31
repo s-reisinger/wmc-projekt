@@ -42,14 +42,14 @@ import 'package:openapi/api.dart';
 
 
 final api_instance = AppApi();
-final id = 56; // int | 
-final day = 2013-10-20T19:20:30+01:00; // DateTime | 
+final employeeId = 56; // int | 
+final timeEntryDto = TimeEntryDto(); // TimeEntryDto | 
 
 try {
-    final result = api_instance.employeesIdTimeentriesGet(id, day);
+    final result = api_instance.appEmployeesEmployeeIdTimeentriesPost(employeeId, timeEntryDto);
     print(result);
 } catch (e) {
-    print('Exception when calling AppApi->employeesIdTimeentriesGet: $e\n');
+    print('Exception when calling AppApi->appEmployeesEmployeeIdTimeentriesPost: $e\n');
 }
 
 ```
@@ -60,6 +60,7 @@ All URIs are relative to *http://localhost*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+*AppApi* | [**appEmployeesEmployeeIdTimeentriesPost**](doc//AppApi.md#appemployeesemployeeidtimeentriespost) | **POST** /App/employees/{employeeId}/timeentries | 
 *AppApi* | [**employeesIdTimeentriesGet**](doc//AppApi.md#employeesidtimeentriesget) | **GET** /employees/{id}/timeentries | 
 *AppApi* | [**employeesIdTotalHoursGet**](doc//AppApi.md#employeesidtotalhoursget) | **GET** /employees/{id}/totalHours | 
 *AppApi* | [**employeesPost**](doc//AppApi.md#employeespost) | **POST** /employees | 
@@ -75,6 +76,7 @@ Class | Method | HTTP request | Description
 
  - [AddEmployeeDto](doc//AddEmployeeDto.md)
  - [Employee](doc//Employee.md)
+ - [EmployeeDto](doc//EmployeeDto.md)
  - [TimeEntryDto](doc//TimeEntryDto.md)
  - [TotalDayTimeEntryDto](doc//TotalDayTimeEntryDto.md)
 

@@ -6,6 +6,7 @@ analysis_options.yaml
 doc/AddEmployeeDto.md
 doc/AppApi.md
 doc/Employee.md
+doc/EmployeeDto.md
 doc/TimeEntryDto.md
 doc/TotalDayTimeEntryDto.md
 git_push.sh
@@ -21,11 +22,13 @@ lib/auth/http_bearer_auth.dart
 lib/auth/oauth.dart
 lib/model/add_employee_dto.dart
 lib/model/employee.dart
+lib/model/employee_dto.dart
 lib/model/time_entry_dto.dart
 lib/model/total_day_time_entry_dto.dart
 pubspec.yaml
 test/add_employee_dto_test.dart
 test/app_api_test.dart
+test/employee_dto_test.dart
 test/employee_test.dart
 test/time_entry_dto_test.dart
 test/total_day_time_entry_dto_test.dart

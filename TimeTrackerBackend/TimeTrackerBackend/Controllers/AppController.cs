@@ -9,15 +9,15 @@ namespace TimeTrackerBackend.Controllers;
 public class AppController(TimeTrackerContext db) : ControllerBase
 {
     [HttpPost("/login")]
-    public bool Login([FromQuery] string email, [FromQuery] string password)
+    public EmployeeDto? Login([FromQuery] string email, [FromQuery] string password)
     {
         var user = db.Employees.FirstOrDefault(e => e.Email == email);
         if (user == null)
         {
-            return false;
+            return null;
         }
 
-        return user.PasswordHash == password;
+        return user.PasswordHash == password ? new EmployeeDto(user.Id, user.FirstName, user.LastName) : null;
     }
 
     [HttpPost("/employees")]
@@ -193,9 +193,55 @@ public class AppController(TimeTrackerContext db) : ControllerBase
 
         return true;
     }
+    
+    [HttpPost("employees/{employeeId}/timeentries")]
+    public ActionResult<TimeEntryDto> CreateWorkingHours(int employeeId, [FromBody] TimeEntryDto dto)
+    {
+        // 1) Validate End is not in the future
+        if (dto.End > DateTime.Now)
+        {
+            return BadRequest("Cannot set 'End' to a future time.");
+        }
+
+        // 2) Check for overlapping entries for this employee
+        bool hasOverlap = db.TimeEntries.Any(e =>
+            e.EmployeeId == employeeId &&
+            e.Start < dto.End &&
+            (e.End > dto.Start));
+
+        if (hasOverlap)
+        {
+            return BadRequest("This time range overlaps with an existing entry.");
+        }
+
+        // 3) Create a new TimeEntry entity
+        var newEntry = new TimeEntry
+        {
+            EmployeeId = employeeId,
+            Start = dto.Start,    // Make sure these DateTimes are in the correct Kind (UTC or local).
+            End = dto.End,
+            Comment = dto.Comment
+        };
+
+        db.TimeEntries.Add(newEntry);
+        db.SaveChanges();
+
+        // 4) Return the newly created entry as DTO
+        var createdDto = new TimeEntryDto(
+            newEntry.Id,
+            newEntry.EmployeeId,
+            newEntry.Start,
+            newEntry.End,
+            newEntry.Comment
+        );
+
+        return Ok(createdDto);
+    }
 
 
     public record AddEmployeeDto(String FirstName, String LastName, String Email, String Password);
+
+    public record EmployeeDto(int Id, String FirstName, String LastName);
 
     public record TimeEntryDto(int Id, int EmployeeId, DateTime Start, DateTime? End, String Comment);
 

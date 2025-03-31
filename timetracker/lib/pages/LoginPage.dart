@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:timetracker/MyFlutterApiClient/lib/api.dart';
+import 'package:timetracker/services/SharedService.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -18,7 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   AppApi? api;
 
   _LoginPageState() {
-    var client = ApiClient(basePath: 'http://localhost:5000');
+    var client = ApiClient(basePath: SharedService.basePath);
     api = AppApi(client);
   }
 
@@ -36,10 +37,10 @@ class _LoginPageState extends State<LoginPage> {
     // For demonstration, we'll just simulate a quick check.
     try {
       var res = await api!.loginPost(email: username, password: password);
-      if (res!) {
+      if (res != null) {
         print('res is true');
         if (!mounted) return;
-        print('going to home');
+        SharedService.loggedInUser = res;
         context.go('/home');
       } else {
         setState(() {

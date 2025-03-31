@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/SettingsService.dart';
@@ -6,10 +7,8 @@ import '../services/SettingsService.dart';
 class SettingsPage extends StatefulWidget {
   final ValueNotifier<bool> darkModeNotifier;
 
-  const SettingsPage({
-    Key? key,
-    required this.darkModeNotifier,
-  }) : super(key: key);
+  const SettingsPage({Key? key, required this.darkModeNotifier})
+    : super(key: key);
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -51,9 +50,7 @@ class _SettingsPageState extends State<SettingsPage> {
     bool isDarkMode = widget.darkModeNotifier.value;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -72,6 +69,11 @@ class _SettingsPageState extends State<SettingsPage> {
           ElevatedButton(
             onPressed: _onSaveDisplayName,
             child: const Text('Save Display Name'),
+          ),
+          SizedBox(height: 20,),
+          ElevatedButton(
+            onPressed: () => context.go('/'),
+            child: const Text('Logout'),
           ),
         ],
       ),

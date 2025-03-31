@@ -186,6 +186,8 @@ class ApiClient {
           return AddEmployeeDto.fromJson(value);
         case 'Employee':
           return Employee.fromJson(value);
+        case 'EmployeeDto':
+          return EmployeeDto.fromJson(value);
         case 'TimeEntryDto':
           return TimeEntryDto.fromJson(value);
         case 'TotalDayTimeEntryDto':

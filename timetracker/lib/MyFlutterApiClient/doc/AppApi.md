@@ -9,6 +9,7 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**appEmployeesEmployeeIdTimeentriesPost**](AppApi.md#appemployeesemployeeidtimeentriespost) | **POST** /App/employees/{employeeId}/timeentries | 
 [**employeesIdTimeentriesGet**](AppApi.md#employeesidtimeentriesget) | **GET** /employees/{id}/timeentries | 
 [**employeesIdTotalHoursGet**](AppApi.md#employeesidtotalhoursget) | **GET** /employees/{id}/totalHours | 
 [**employeesPost**](AppApi.md#employeespost) | **POST** /employees | 
@@ -19,6 +20,49 @@ Method | HTTP request | Description
 [**timeentriesIdDelete**](AppApi.md#timeentriesiddelete) | **DELETE** /timeentries/{id} | 
 [**timeentriesIdPut**](AppApi.md#timeentriesidput) | **PUT** /timeentries/{id} | 
 
+
+# **appEmployeesEmployeeIdTimeentriesPost**
+> TimeEntryDto appEmployeesEmployeeIdTimeentriesPost(employeeId, timeEntryDto)
+
+
+
+### Example
+```dart
+import 'package:openapi/api.dart';
+
+final api_instance = AppApi();
+final employeeId = 56; // int | 
+final timeEntryDto = TimeEntryDto(); // TimeEntryDto | 
+
+try {
+    final result = api_instance.appEmployeesEmployeeIdTimeentriesPost(employeeId, timeEntryDto);
+    print(result);
+} catch (e) {
+    print('Exception when calling AppApi->appEmployeesEmployeeIdTimeentriesPost: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **employeeId** | **int**|  | 
+ **timeEntryDto** | [**TimeEntryDto**](TimeEntryDto.md)|  | [optional] 
+
+### Return type
+
+[**TimeEntryDto**](TimeEntryDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json, text/json, application/*+json
+ - **Accept**: text/plain, application/json, text/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **employeesIdTimeentriesGet**
 > List<TimeEntryDto> employeesIdTimeentriesGet(id, day)
@@ -191,7 +235,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **loginPost**
-> bool loginPost(email, password)
+> EmployeeDto loginPost(email, password)
 
 
 
@@ -220,7 +264,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-**bool**
+[**EmployeeDto**](EmployeeDto.md)
 
 ### Authorization
 

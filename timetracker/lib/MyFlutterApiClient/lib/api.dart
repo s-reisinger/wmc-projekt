@@ -32,6 +32,7 @@ part 'api/app_api.dart';
 
 part 'model/add_employee_dto.dart';
 part 'model/employee.dart';
+part 'model/employee_dto.dart';
 part 'model/time_entry_dto.dart';
 part 'model/total_day_time_entry_dto.dart';
 
